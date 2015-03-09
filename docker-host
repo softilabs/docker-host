@@ -16,17 +16,17 @@ _start(){
         echo -e "ENV\t\tdev"
         exit
     fi
-    CONFIG_ENV_DIR=$(realpath $1)
-    CONFIG_DIR=$(realpath ${CONFIG_ENV_DIR}/..)
-    CONFIGS_DIR=$(realpath ${CONFIG_DIR}/..)
-    BASE_DIR=$(realpath ${CONFIGS_DIR}/..)
+    CONFIG_ENV_DIR=$(readlink -e $1)
+    CONFIG_DIR=$(readlink -e ${CONFIG_ENV_DIR}/..)
+    CONFIGS_DIR=$(readlink -e ${CONFIG_DIR}/..)
+    BASE_DIR=$(readlink -e ${CONFIGS_DIR}/..)
     CONFIG=${CONFIG_DIR//${CONFIGS_DIR}/}
     CONFIG=${CONFIG:1}
     ENV=${CONFIG_ENV_DIR//${CONFIG_DIR}/}
     ENV=${ENV:1}
-    DATA_DIR=$(realpath ${BASE_DIR}/Data/${CONFIG})
-    DATA_ENV_DIR=$(realpath ${DATA_DIR}/${ENV})
-    PROJECTS_DIR=$(realpath ${BASE_DIR}/Projects)
+    DATA_DIR=$(readlink -e ${BASE_DIR}/Data/${CONFIG})
+    DATA_ENV_DIR=$(readlink -e ${DATA_DIR}/${ENV})
+    PROJECTS_DIR=$(readlink -e ${BASE_DIR}/Projects)
     _RUNFILE=${CONFIG_ENV_DIR}/.run
     if [ ! -f ${_RUNFILE} ]; then
         echo -e "\e[31mRun file not found\e[39m"
@@ -109,7 +109,7 @@ _export(){
         echo -e "Information: The paths are relative to home directory."
         exit
     fi
-    _CONFIG_DIR=$(realpath $1)
+    _CONFIG_DIR=$(readlink -e $1)
     for _FILE in $(find ${_CONFIG_DIR}/.export -type f); do
         _HOST=${_FILE##*/}
         echo -e "\e[32mExporting on ${_HOST}\e[39m"
@@ -132,7 +132,7 @@ _import(){
         echo -e "Information: The paths are relative to home directory."
         exit
     fi
-    _CONFIG_DIR=$(realpath $1)
+    _CONFIG_DIR=$(readlink -e $1)
     for _FILE in $(find ${_CONFIG_DIR}/.import -type f); do
         _HOST=${_FILE##*/}
         echo -e "\e[32mImporting from ${_HOST}\e[39m"
@@ -185,8 +185,8 @@ case $1 in
     status) _status ;;
     clean) _clean ;;
     clear) _clear ;;
-    export) _export $2 $3 ;;
-    import) _import $2 $3 ;;
+    export) _export $2 ;;
+    import) _import $2 ;;
     login) _login $2 ;;
     *) _usage ;;
 esac
