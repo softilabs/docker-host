@@ -32,6 +32,8 @@ $ docker-host [COMMAND] --help
 
 ### Naming conventions
 
+| Name | Convention |
+|:---:| --- |
 | Configuration dir | ```[BASE_DIR]/Configs/[CONFIG]``` |
 | Container dir | ```[BASE_DIR]/Configs/[CONFIG]/[ENV]/[CONTAINER(/)]``` |
 | Generated image name | ```[CONFIG]/[ENV]_[CONTAINER(_)]``` |
