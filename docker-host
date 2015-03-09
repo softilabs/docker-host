@@ -1,0 +1,192 @@
+#!/bin/bash
+
+_start(){
+    if [[ ! $1 || $1 == "--help" ]]; then
+        echo -e "Usage: docker-host start [CONFIG_ENV_DIR]\n"
+        echo -e "Options variables:"
+        echo -e "name\t\texample"
+        echo -e "BASE_DIR\t~"
+        echo -e "CONFIGS_DIR\t~/Configs"
+        echo -e "CONFIG_DIR\t~/Configs/hello"
+        echo -e "CONFIG_ENV_DIR\t~/Configs/hello/dev"
+        echo -e "DATA_DIR\t~/Data/hello"
+        echo -e "DATA_ENV_DIR\t~/Data/hello/dev"
+        echo -e "PROJECTS_DIR\t~/Projects"
+        echo -e "CONFIG\t\thello"
+        echo -e "ENV\t\tdev"
+        exit
+    fi
+    CONFIG_ENV_DIR=$(realpath $1)
+    CONFIG_DIR=$(realpath ${CONFIG_ENV_DIR}/..)
+    CONFIGS_DIR=$(realpath ${CONFIG_DIR}/..)
+    BASE_DIR=$(realpath ${CONFIGS_DIR}/..)
+    CONFIG=${CONFIG_DIR//${CONFIGS_DIR}/}
+    CONFIG=${CONFIG:1}
+    ENV=${CONFIG_ENV_DIR//${CONFIG_DIR}/}
+    ENV=${ENV:1}
+    DATA_DIR=$(realpath ${BASE_DIR}/Data/${CONFIG})
+    DATA_ENV_DIR=$(realpath ${DATA_DIR}/${ENV})
+    PROJECTS_DIR=$(realpath ${BASE_DIR}/Projects)
+    _RUNFILE=${CONFIG_ENV_DIR}/.run
+    if [ ! -f ${_RUNFILE} ]; then
+        echo -e "\e[31mRun file not found\e[39m"
+        exit
+    fi
+    echo -e "\e[32mKilling containers\e[39m"
+    docker kill $(docker ps -q) &> /dev/null
+    echo -e "\e[32mRemoving containers\e[39m"
+    docker rm $(docker ps -qa) &> /dev/null
+    _start_imagebuild(){
+        local _IMAGEFILE=$1
+        local _P_IMAGE=$(head -n 1 ${_IMAGEFILE})
+        local _P_IMAGE=${_P_IMAGE//FROM /}
+        local _P_IMAGEDIR=${CONFIGS_DIR}/${_P_IMAGE//_//}
+        local _P_IMAGEFILE=${_P_IMAGEDIR}/Dockerfile
+        if [ ! -f ${_P_IMAGEFILE} ]; then
+            return
+        fi
+        local _P_GOPTIONSFILE=${_P_IMAGEDIR}/.globaloptions
+        if [ -f ${_P_GOPTIONSFILE} ]; then
+            _OPTIONS+=$(cat ${_P_GOPTIONSFILE})' '
+        fi
+        _start_imagebuild ${_P_IMAGEFILE}
+        echo -e "\e[32mBuilding parent image ${_P_IMAGE}\e[39m"
+        docker build -t ${_P_IMAGE} ${_P_IMAGEDIR} 2> /dev/null
+    }
+    for _CONTAINERPATH in $(cat ${_RUNFILE}); do
+        _CONTAINERDIR=${CONFIG_ENV_DIR}/${_CONTAINERPATH}
+        for _IMAGEFILE in $(find ${_CONTAINERDIR} -name Dockerfile); do
+            _CONTAINER=${_IMAGEFILE//${CONFIG_ENV_DIR}/}
+            _CONTAINER=${_CONTAINER:1:-11}
+            _CONTAINER=${_CONTAINER////_}
+            _IMAGE=${CONFIG}/${ENV}_${_CONTAINER}
+            _IMAGEDIR=$(dirname ${_IMAGEFILE})
+            _OPTIONS=''
+            _start_imagebuild ${_IMAGEFILE}
+            echo -e "\e[32mBuilding image ${_IMAGE}\e[39m"
+            docker build -t ${_IMAGE} ${_IMAGEDIR} 2> /dev/null
+            _GOPTIONSFILE=${_IMAGEDIR}/.globaloptions
+            if [ -f ${_GOPTIONSFILE} ]; then
+                _OPTIONS+=$(cat ${_GOPTIONSFILE})' '
+            fi
+            _OPTIONSFILE=${_IMAGEDIR}/.options
+            if [ -f ${_OPTIONSFILE} ]; then
+                _OPTIONS+=$(cat ${_OPTIONSFILE})' '
+            fi
+            _OPTIONS=$(eval echo ${_OPTIONS})
+            echo -e "\e[32mRunning container ${_CONTAINER}\e[39m"
+            docker run -h ${_CONTAINER} --name ${_CONTAINER} ${_OPTIONS} -tid ${_IMAGE} 1> /dev/null
+        done
+    done
+}
+
+_stop(){
+    docker kill $(docker ps -q) &> /dev/null
+    docker rm $(docker ps -aq) &> /dev/null
+}
+
+_status(){
+    echo -e "\e[32mIMAGES\e[39m"
+    docker images
+    echo -e "\e[32mCONTAINERS\e[39m"
+    docker ps -a
+}
+
+_clean(){
+    docker rm -f $(docker ps -aq -f status=exited) &> /dev/null
+    docker rmi -f $(docker images | grep "^<none>" | awk "{print \$3}") &> /dev/null
+}
+
+_clear(){
+    docker kill $(docker ps -q) &> /dev/null
+    docker rm $(docker ps -aq) &> /dev/null
+    docker rmi -f $(docker images -q) &> /dev/null
+}
+
+_export(){
+    if [[ ! $1 || $1 == "--help" ]]; then
+        echo -e "Usage: docker-host export [CONFIG_DIR])\n"
+        echo -e "Information: The paths are relative to home directory."
+        exit
+    fi
+    _CONFIG_DIR=$(realpath $1)
+    for _FILE in $(find ${_CONFIG_DIR}/.export -type f); do
+        _HOST=${_FILE##*/}
+        echo -e "\e[32mExporting on ${_HOST}\e[39m"
+        _SOURCES=''
+        _EXCLUDES=''
+        for _PATH in $(cat ${_FILE}); do
+            if [ ${_PATH:0:1} != '!' ]; then
+                _SOURCES+=${_PATH}' '
+            else
+                _EXCLUDES+='--exclude '${_PATH:1}' '
+            fi
+        done
+        cd && rsync ${_EXCLUDES}--delete --delete-excluded -avzRe ssh ${_SOURCES} ${_HOST}:~
+    done
+}
+
+_import(){
+    if [[ ! $1 || $1 == "--help" ]]; then
+        echo -e "Usage: docker-host import [CONFIG_DIR])\n"
+        echo -e "Information: The paths are relative to home directory."
+        exit
+    fi
+    _CONFIG_DIR=$(realpath $1)
+    for _FILE in $(find ${_CONFIG_DIR}/.import -type f); do
+        _HOST=${_FILE##*/}
+        echo -e "\e[32mImporting from ${_HOST}\e[39m"
+        _SOURCES=''
+        _EXCLUDES=''
+        for _PATH in $(cat ${_FILE}); do
+            if [ ${_PATH:0:1} != '!' ]; then
+                _SOURCES+=${_HOST}:${_PATH}' '
+            else
+                _EXCLUDES+='--exclude '${_PATH:1}' '
+            fi
+        done
+        rsync ${_EXCLUDES}--delete --delete-excluded -avzRe ssh ${_SOURCES} ~
+    done
+}
+
+_login(){
+    if [[ ! $1 || $1 == "--help" ]]; then
+        echo -e "Usage: docker-host login ([USER]@)[CONTAINER]\n"
+        echo -e "Information: The username is root by default."
+        exit
+    fi
+    _CONTAINER=$1
+    _USER=root
+    _TMP=(${_CONTAINER//@/ })
+    if [ ${_TMP[1]} ]; then
+        _CONTAINER=${_TMP[1]}
+        _USER=${_TMP[0]}
+    fi
+    docker exec -ti ${_CONTAINER} setuser ${_USER} bash
+}
+
+_usage(){
+    echo -e "Usage: docker-host [COMMAND]\n"
+    echo -e "A Docker extension to manage multiple containers and more\n"
+    echo -e "Commands:"
+    echo -e "\tstart\tStart a configuration"
+    echo -e "\tstop\tStop all containers"
+    echo -e "\tstatus\tList all images and all containers"
+    echo -e "\tclean\tDelete exited containers and unused images"
+    echo -e "\tclear\tDelete all containers and all images"
+    echo -e "\texport\tExport data to remote host(s)"
+    echo -e "\timport\tImport data to remote host(s)"
+    echo -e "\tlogin\tOpen a bash terminal on a running container"
+}
+
+case $1 in
+    start) _start $2 ;;
+    stop) _stop ;;
+    status) _status ;;
+    clean) _clean ;;
+    clear) _clear ;;
+    export) _export $2 $3 ;;
+    import) _import $2 $3 ;;
+    login) _login $2 ;;
+    *) _usage ;;
+esac
