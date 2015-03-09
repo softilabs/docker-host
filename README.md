@@ -1,5 +1,5 @@
 # Docker Host
-## A Docker extension to manage multiple containers and more
+A Docker extension to manage multiple containers and more
 
 #### The main purpose is to assemble applications and her components by combining several containers grouped by environment, this combination is then called configuration.
 
@@ -19,7 +19,7 @@
 
 ```bash
 # cd /usr/local/bin
-# wget https://raw.githubusercontent.com/softilabs/docker-host/docker-host
+# wget https://raw.githubusercontent.com/softilabs/docker-host/master/docker-host
 # chmod +x docker-host
 ```
 
@@ -32,28 +32,16 @@ $ docker-host [COMMAND] --help
 
 ### Naming conventions
 
-<dl>
-  <dt>Configuration dir</dt>
-  <dd>```[BASE_DIR]/Configs/[CONFIG]```</dd>
-  <dt>Container dir</dt>
-  <dd>```[BASE_DIR]/Configs/[CONFIG]/[ENV]/[CONTAINER(/)]```</dd>
-  <dt>Generated image name</dt>
-  <dd>```[CONFIG]/[ENV]_[CONTAINER(_)]```</dd>
-  <dt>Generated container name</dt>
-  <dd>```[CONTAINER(_)]```</dd>
-  <dt>Export dir</dt>
-  <dd>```[BASE_DIR]/Configs/[CONFIG]/.export```</dd>
-  <dt>Import dir</dt>
-  <dd>```[BASE_DIR]/Configs/[CONFIG]/.import```</dd>
-  <dt>Data dir</dt>
-  <dd>```[BASE_DIR]/Data/[CONFIG]```</dd>
-  <dt>Data environment dir</dt>
-  <dd>```[BASE_DIR]/Data/[CONFIG]/[ENV]```</dd>
-  <dt>Data container dir</dt>
-  <dd>```[BASE_DIR]/Data/[CONFIG]/[ENV]/[CONTAINER(/)]```</dd>
-  <dt>Projects dir</dt>
-  <dd>```[BASE_DIR]/Projects```</dd>
-</dl>
+| Configuration dir | ```[BASE_DIR]/Configs/[CONFIG]``` |
+| Container dir | ```[BASE_DIR]/Configs/[CONFIG]/[ENV]/[CONTAINER(/)]``` |
+| Generated image name | ```[CONFIG]/[ENV]_[CONTAINER(_)]``` |
+| Generated container name | ```[CONTAINER(_)]``` |
+| Export dir | ```[BASE_DIR]/Configs/[CONFIG]/.export``` |
+| Import dir | ```[BASE_DIR]/Configs/[CONFIG]/.import``` |
+| Data dir | ```[BASE_DIR]/Data/[CONFIG]``` |
+| Data environment dir | ```[BASE_DIR]/Data/[CONFIG]/[ENV]``` |
+| Data container dir | ```[BASE_DIR]/Data/[CONFIG]/[ENV]/[CONTAINER(/)]``` |
+| Projects dir | ```[BASE_DIR]/Projects``` |
 
 ### Specific files
 
