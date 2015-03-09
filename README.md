@@ -92,12 +92,13 @@ $ docker-host stop
 ```bash
 $ docker-host export vhome/Configs/hello
 ```
-```[BASE_DIR]/Configs/[CONFIG]/.export/[USER]@[HOST]``` filename needs update.
+*```[BASE_DIR]/Configs/[CONFIG]/.export/[USER]@[HOST]``` filename needs update.*
 
 **Start configuration on remote host**
 ```bash
 $ ssh [USER]@[HOST] docker-host start vhome/Configs/hello/prod
 ```
+*Docker Host installation is required on remote host.*
 
 ### Best practices
 
