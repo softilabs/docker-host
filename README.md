@@ -65,6 +65,13 @@ $ git clone https://github.com/softilabs/docker-host-example vhome
 ```bash
 $ docker-host start vhome/Configs/hello/dev
 ```
+Open [http://localhost/](http://localhost/)
+
+**Switch another configuration**
+```bash
+$ docker-host start vhome/Configs/hello/prod
+```
+Refresh [http://localhost/](http://localhost/)
 
 **List images and containers**
 ```bash
@@ -73,7 +80,7 @@ $ docker-host status
 
 **Open a terminal of a running container**
 ```bash
-$ docker-host login dev@frontend
+$ docker-host login blog
 ```
 
 **Stop running configuration**
@@ -85,6 +92,7 @@ $ docker-host stop
 ```bash
 $ docker-host export vhome/Configs/hello
 ```
+```[BASE_DIR]/Configs/[CONFIG]/.export/[USER]@[HOST]``` filename needs update.
 
 **Start configuration on remote host**
 ```bash
