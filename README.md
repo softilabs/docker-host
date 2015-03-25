@@ -15,19 +15,19 @@ A Docker extension to manage multiple containers and more
 
 [Docker](https://docker.com/) | [Git](http://git-scm.com/) | [Rsync](https://rsync.samba.org/) | [SSH](http://www.openssh.com/) | [Wget](https://www.gnu.org/software/wget/)
 
-### Installation or update
+### Installation
 
 ```bash
-# cd /usr/local/bin
-# wget https://raw.githubusercontent.com/softilabs/docker-host/master/docker-host
-# chmod +x docker-host
+cd /usr/local/bin
+sudo wget https://raw.githubusercontent.com/softilabs/docker-host/master/docker-host
+sudo chmod +x docker-host
 ```
 
 ### Usages
 
 ```bash
-$ docker-host --help
-$ docker-host [COMMAND] --help
+docker-host --help
+docker-host [COMMAND] --help
 ```
 
 ### Naming conventions
@@ -57,46 +57,46 @@ $ docker-host [COMMAND] --help
 
 **Installation**
 ```bash
-$ cd
-$ git clone https://github.com/softilabs/docker-host-example vhome
+cd
+git clone https://github.com/softilabs/docker-host-example vhome
 ```
 
 **Start configuration**
 ```bash
-$ docker-host start vhome/Configs/hello/dev
+docker-host start vhome/Configs/hello/dev
 ```
 Open [http://localhost/](http://localhost/)
 
 **Switch another configuration**
 ```bash
-$ docker-host start vhome/Configs/hello/prod
+docker-host start vhome/Configs/hello/prod
 ```
 Refresh [http://localhost/](http://localhost/)
 
 **List images and containers**
 ```bash
-$ docker-host status
+docker-host status
 ```
 
 **Open a terminal of a running container**
 ```bash
-$ docker-host login blog
+docker-host login blog
 ```
 
 **Stop running configuration**
 ```bash
-$ docker-host stop
+docker-host stop
 ```
 
 **Export data on remote host(s)**
 ```bash
-$ docker-host export vhome/Configs/hello
+docker-host export vhome/Configs/hello
 ```
 *```[BASE_DIR]/Configs/[CONFIG]/.export/[USER]@[HOST]``` filename needs update.*
 
 **Start configuration on remote host**
 ```bash
-$ ssh [USER]@[HOST] docker-host start vhome/Configs/hello/prod
+ssh [USER]@[HOST] docker-host start vhome/Configs/hello/prod
 ```
 *Docker Host installation is required on remote host.*
 

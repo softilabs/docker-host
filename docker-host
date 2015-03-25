@@ -169,6 +169,12 @@ _login(){
     docker exec -ti ${_CONTAINER} setuser ${_USER} bash
 }
 
+_update(){
+    cd /usr/local/bin
+    sudo wget -N https://raw.githubusercontent.com/softilabs/docker-host/master/docker-host
+    sudo chmod +x docker-host
+}
+
 _usage(){
     echo -e "Usage: docker-host [COMMAND]\n"
     echo -e "A Docker extension to manage multiple containers and more\n"
@@ -181,6 +187,7 @@ _usage(){
     echo -e "\texport\tExport data to remote host(s)"
     echo -e "\timport\tImport data to remote host(s)"
     echo -e "\tlogin\tOpen a bash terminal on a running container"
+    echo -e "\tupdate\tUpdate the script from GitHub"
 }
 
 case $1 in
@@ -192,5 +199,6 @@ case $1 in
     export) _export $2 ;;
     import) _import $2 ;;
     login) _login $2 ;;
+    update) _update $2 ;;
     *) _usage ;;
 esac
