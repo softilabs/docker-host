@@ -116,10 +116,12 @@ _export(){
         _SOURCES=''
         _EXCLUDES=''
         for _PATH in $(cat ${_FILE}); do
-            if [ ${_PATH:0:1} != '!' ]; then
-                _SOURCES+=${_PATH}' '
-            else
-                _EXCLUDES+='--exclude '${_PATH:1}' '
+            if [ ${_PATH:0:1} != '#' ]; then
+                if [ ${_PATH:0:1} == '!' ]; then
+                    _EXCLUDES+='--exclude '${_PATH:1}' '
+                else
+                    _SOURCES+=${_PATH}' '
+                fi
             fi
         done
         cd && rsync ${_EXCLUDES}--delete --delete-excluded -avzRe ssh ${_SOURCES} ${_HOST}:~
@@ -139,10 +141,12 @@ _import(){
         _SOURCES=''
         _EXCLUDES=''
         for _PATH in $(cat ${_FILE}); do
-            if [ ${_PATH:0:1} != '!' ]; then
-                _SOURCES+=${_HOST}:${_PATH}' '
-            else
-                _EXCLUDES+='--exclude '${_PATH:1}' '
+            if [ ${_PATH:0:1} != '#' ]; then
+                if [ ${_PATH:0:1} == '!' ]; then
+                    _EXCLUDES+='--exclude '${_PATH:1}' '
+                else
+                    _SOURCES+=${_PATH}' '
+                fi
             fi
         done
         rsync ${_EXCLUDES}--delete --delete-excluded -avzRe ssh ${_SOURCES} ~
