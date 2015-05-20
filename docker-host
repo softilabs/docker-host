@@ -2,18 +2,18 @@
 
 _start(){
     if [[ ! $1 || $1 == "--help" ]]; then
-        echo -e "Usage: docker-host start [CONFIG_ENV_DIR]\n"
-        echo -e "Options variables:"
-        echo -e "name\t\texample"
-        echo -e "BASE_DIR\t~"
-        echo -e "CONFIGS_DIR\t~/Configs"
-        echo -e "CONFIG_DIR\t~/Configs/hello"
-        echo -e "CONFIG_ENV_DIR\t~/Configs/hello/dev"
-        echo -e "DATA_DIR\t~/Data/hello"
-        echo -e "DATA_ENV_DIR\t~/Data/hello/dev"
-        echo -e "PROJECTS_DIR\t~/Projects"
-        echo -e "CONFIG\t\thello"
-        echo -e "ENV\t\tdev"
+        echo -e "\e[33mUsage:\e[39m docker-host start [CONFIG_ENV_DIR]\n"
+        echo -e "\e[33mOptions variables:\e[39m"
+        echo -e " name\t\texample"
+        echo -e " \e[32mBASE_DIR\e[39m\t~"
+        echo -e " \e[32mCONFIGS_DIR\e[39m\t~/Configs"
+        echo -e " \e[32mCONFIG_DIR\e[39m\t~/Configs/hello"
+        echo -e " \e[32mCONFIG_ENV_DIR\e[39m\t~/Configs/hello/dev"
+        echo -e " \e[32mDATA_DIR\e[39m\t~/Data/hello"
+        echo -e " \e[32mDATA_ENV_DIR\e[39m\t~/Data/hello/dev"
+        echo -e " \e[32mPROJECTS_DIR\e[39m\t~/Projects"
+        echo -e " \e[32mCONFIG\e[39m\t\thello"
+        echo -e " \e[32mENV\e[39m\t\tdev"
         exit
     fi
     CONFIG_ENV_DIR=$(readlink -e $1)
@@ -36,6 +36,17 @@ _start(){
     docker kill $(docker ps -q) &> /dev/null
     echo -e "\e[32mRemoving containers\e[39m"
     docker rm $(docker ps -qa) &> /dev/null
+    _add_optionsfile(){
+        local _OPTIONSFILE=$1
+        if [ -f ${_OPTIONSFILE} ]; then
+            while read _OPTION
+            do
+                if [ ${_OPTION:0:1} != '#' ]; then
+                    _OPTIONS+=${_OPTION}' '
+                fi
+            done <${_OPTIONSFILE}
+        fi
+    }
     _start_imagebuild(){
         local _IMAGEFILE=$1
         local _P_IMAGE=$(head -n 1 ${_IMAGEFILE})
@@ -45,10 +56,7 @@ _start(){
         if [ ! -f ${_P_IMAGEFILE} ]; then
             return
         fi
-        local _P_GOPTIONSFILE=${_P_IMAGEDIR}/.globaloptions
-        if [ -f ${_P_GOPTIONSFILE} ]; then
-            _OPTIONS+=$(cat ${_P_GOPTIONSFILE})' '
-        fi
+        _add_optionsfile ${_P_IMAGEDIR}/.globaloptions
         _start_imagebuild ${_P_IMAGEFILE}
         echo -e "\e[32mBuilding parent image ${_P_IMAGE}\e[39m"
         docker build -t ${_P_IMAGE} ${_P_IMAGEDIR} 2> /dev/null
@@ -65,14 +73,8 @@ _start(){
             _start_imagebuild ${_IMAGEFILE}
             echo -e "\e[32mBuilding image ${_IMAGE}\e[39m"
             docker build -t ${_IMAGE} ${_IMAGEDIR} 2> /dev/null
-            _GOPTIONSFILE=${_IMAGEDIR}/.globaloptions
-            if [ -f ${_GOPTIONSFILE} ]; then
-                _OPTIONS+=$(cat ${_GOPTIONSFILE})' '
-            fi
-            _OPTIONSFILE=${_IMAGEDIR}/.options
-            if [ -f ${_OPTIONSFILE} ]; then
-                _OPTIONS+=$(cat ${_OPTIONSFILE})' '
-            fi
+            _add_optionsfile ${_IMAGEDIR}/.globaloptions
+            _add_optionsfile ${_IMAGEDIR}/.options
             _OPTIONS=$(eval echo ${_OPTIONS})
             echo -e "\e[32mRunning container ${_CONTAINER}\e[39m"
             docker run -h ${_CONTAINER} --name ${_CONTAINER} ${_OPTIONS} -tid ${_IMAGE} 1> /dev/null
@@ -88,7 +90,7 @@ _stop(){
 _status(){
     echo -e "\e[32mIMAGES\e[39m"
     docker images
-    echo -e "\e[32mCONTAINERS\e[39m"
+    echo -e "\n\e[32mCONTAINERS\e[39m"
     docker ps -a
 }
 
@@ -98,15 +100,23 @@ _clean(){
 }
 
 _clear(){
+    if [[ $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host clear [IMAGE_PATTERN]"
+        exit
+    fi
     docker kill $(docker ps -q) &> /dev/null
     docker rm $(docker ps -aq) &> /dev/null
-    docker rmi -f $(docker images -q) &> /dev/null
+    _IMAGES=$(docker images -q)
+    if [[ $1 ]]; then
+        _IMAGES=$(docker images | grep $1 | awk "{print \$3}")
+    fi
+    docker rmi -f ${_IMAGES} &> /dev/null
 }
 
 _export(){
     if [[ ! $1 || $1 == "--help" ]]; then
-        echo -e "Usage: docker-host export [CONFIG_DIR])\n"
-        echo -e "Information: The paths are relative to home directory."
+        echo -e "\e[33mUsage:\e[39m docker-host export [CONFIG_DIR]\n"
+        echo -e "\e[33mInformation:\e[39m The paths are relative to home directory."
         exit
     fi
     _CONFIG_DIR=$(readlink -e $1)
@@ -130,8 +140,8 @@ _export(){
 
 _import(){
     if [[ ! $1 || $1 == "--help" ]]; then
-        echo -e "Usage: docker-host import [CONFIG_DIR])\n"
-        echo -e "Information: The paths are relative to home directory."
+        echo -e "\e[33mUsage:\e[39m docker-host import [CONFIG_DIR]\n"
+        echo -e "\e[33mInformation:\e[39m The paths are relative to home directory."
         exit
     fi
     _CONFIG_DIR=$(readlink -e $1)
@@ -155,8 +165,8 @@ _import(){
 
 _login(){
     if [[ ! $1 || $1 == "--help" ]]; then
-        echo -e "Usage: docker-host login ([USER]@)[CONTAINER]\n"
-        echo -e "Information: The username is root by default."
+        echo -e "\e[33mUsage:\e[39m docker-host login ([USER]@)[CONTAINER]\n"
+        echo -e "\e[33mInformation:\e[39m The username is root by default."
         exit
     fi
     _CONTAINER=$1
@@ -176,18 +186,24 @@ _update(){
 }
 
 _usage(){
-    echo -e "Usage: docker-host [COMMAND]\n"
+    echo -e "     _            _                   _               _   "
+    echo -e "  __| | ___   ___| | _____ _ __      | |__   ___  ___| |_ "
+    echo -e " / _  |/ _ \ / __| |/ / _ \ '__| ___ | '_ \ / _ \/ __| __|"
+    echo -e "( (_) | (_) | (__|   <  __/ |   |___|| | | | (_) \__ \ |_ "
+    echo -e " \__,_|\___/ \___|_|\_\___|_|        |_| |_|\___/|___/\__|"
+    echo -e "                                                          "
     echo -e "A Docker extension to manage multiple containers and more\n"
-    echo -e "Commands:"
-    echo -e "\tstart\tStart a configuration"
-    echo -e "\tstop\tStop all containers"
-    echo -e "\tstatus\tList all images and all containers"
-    echo -e "\tclean\tDelete exited containers and unused images"
-    echo -e "\tclear\tDelete all containers and all images"
-    echo -e "\texport\tExport data to remote host(s)"
-    echo -e "\timport\tImport data to remote host(s)"
-    echo -e "\tlogin\tOpen a bash terminal on a running container"
-    echo -e "\tupdate\tUpdate from GitHub"
+    echo -e "\e[33mUsage:\e[39m docker-host [COMMAND]\n"
+    echo -e "\e[33mCommands:\e[39m"
+    echo -e " \e[32mstart\e[39m\t\tStart a configuration"
+    echo -e " \e[32mstop\e[39m\t\tStop all containers"
+    echo -e " \e[32mstatus\e[39m\t\tList all images and all containers"
+    echo -e " \e[32mclean\e[39m\t\tDelete exited containers and unused images"
+    echo -e " \e[32mclear\e[39m\t\tDelete all containers and all images"
+    echo -e " \e[32mexport\e[39m\t\tExport data to remote host(s)"
+    echo -e " \e[32mimport\e[39m\t\tImport data to remote host(s)"
+    echo -e " \e[32mlogin\e[39m\t\tOpen a bash terminal on a running container"
+    echo -e " \e[32mupdate\e[39m\t\tUpdate from GitHub"
 }
 
 case $1 in
@@ -195,7 +211,7 @@ case $1 in
     stop) _stop ;;
     status) _status ;;
     clean) _clean ;;
-    clear) _clear ;;
+    clear) _clear $2 ;;
     export) _export $2 ;;
     import) _import $2 ;;
     login) _login $2 ;;
