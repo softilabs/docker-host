@@ -13,7 +13,12 @@ A Docker extension to manage multiple containers and more
 
 ### Requirements
 
-[Docker](https://docker.com/) | [Git](http://git-scm.com/) | [Rsync](https://rsync.samba.org/) | [SSH](http://www.openssh.com/) | [Wget](https://www.gnu.org/software/wget/)
+[Docker](https://docker.com/) |
+[Git](http://git-scm.com/) |
+[jq](http://stedolan.github.io/jq/) |
+[Rsync](https://rsync.samba.org/) |
+[SSH](http://www.openssh.com/) |
+[Wget](https://www.gnu.org/software/wget/)
 
 ### Installation
 
@@ -73,7 +78,7 @@ docker-host start vhome/Configs/hello/prod
 ```
 Refresh [http://localhost/](http://localhost/)
 
-**List images and containers**
+**List all running containers with their interfaces**
 ```bash
 docker-host status
 ```
@@ -102,6 +107,6 @@ ssh [USER]@[HOST] docker-host start vhome/Configs/hello/prod
 
 ### Best practices
 
-* It is advisable to place ```Configs```, ```Data``` and ```Projects``` folders to the root of your home directory on local and remote hosts.
 * The use of ```phusion/baseimage``` is highly recommended to build docker images. The various reasons and instructions are explained on this website : [http://phusion.github.io/baseimage-docker/](http://phusion.github.io/baseimage-docker/)
-* Versioning ```Configs``` folder in a private git repo can be useful for teamwork.
+* It is advisable to place ```Configs```, ```Data``` and ```Projects``` folders to the root of your home directory on local and remote hosts.
+* Versioning the ```Configs``` folder in a private git repo can be useful for teamwork.

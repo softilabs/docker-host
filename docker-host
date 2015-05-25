@@ -35,7 +35,7 @@ _start(){
     echo -e "\e[32mKilling containers\e[39m"
     docker kill $(docker ps -q) &> /dev/null
     echo -e "\e[32mRemoving containers\e[39m"
-    docker rm $(docker ps -qa) &> /dev/null
+    docker rm $(docker ps -aq) &> /dev/null
     _add_optionsfile(){
         local _OPTIONSFILE=$1
         if [ -f ${_OPTIONSFILE} ]; then
@@ -83,19 +83,45 @@ _start(){
 }
 
 _stop(){
+    echo -e "\e[32mKilling containers\e[39m"
     docker kill $(docker ps -q) &> /dev/null
+    echo -e "\e[32mRemoving containers\e[39m"
     docker rm $(docker ps -aq) &> /dev/null
 }
 
 _status(){
-    echo -e "\e[32mIMAGES\e[39m"
-    docker images
-    echo -e "\n\e[32mCONTAINERS\e[39m"
-    docker ps -a
+    _CONTAINERS_JSON=$(docker inspect $(docker ps -q) | jq '.[] | {name: .Config.Hostname, image: .Config.Image, links: .HostConfig.Links, ports: .NetworkSettings.Ports, volumes: .HostConfig.Binds}' -c -M | sort -u)
+    declare -a _CONTAINERS=()
+    for _CONTAINER_JSON in ${_CONTAINERS_JSON[@]}; do
+        _CONTAINER_NAME=$(echo "${_CONTAINER_JSON}" | jq '.["name"]' | grep -oE "[a-z_]+")
+        echo -e "\e[32m${_CONTAINER_NAME}\e[39m"
+        _CONTAINER_IMAGE_NAME=$(echo "${_CONTAINER_JSON}" | jq '.["image"]' | grep -oE "[a-z]+/[a-z_]+")
+        echo -e "\e[33m    ${_CONTAINER_IMAGE_NAME}\e[39m"
+        _CONTAINER_LINKS=$(echo "${_CONTAINER_JSON}" | jq '.["links"]' | sed -e "s/:\/${_CONTAINER_NAME}\//:/" | grep -oE "[a-z_]+:[a-z_]+" | sort -u)
+        for _CONTAINER_LINK in ${_CONTAINER_LINKS[@]}; do
+            echo -e "\e[39m    --link ${_CONTAINER_LINK}\e[39m"
+        done
+        _CONTAINER_PORTS=$(echo "${_CONTAINER_JSON}" | jq '.["ports"]' -c | grep -oE "\"[0-9]+/(tcp|udp)\":[{\"HostIp\":\"[0-9.]+\",\"HostPort\":\"[0-9]+\"")
+        for _CONTAINER_PORT in ${_CONTAINER_PORTS[@]}; do
+            _HOST_IP=$(echo "${_CONTAINER_PORT}" | grep -oE '"HostIp":"[0-9.]+"' | tr -dc '0-9.')':'
+            if [ ${_HOST_IP} == '0.0.0.0:' ]; then
+                _HOST_IP=''
+            fi
+            _HOST_PORT=$(echo "${_CONTAINER_PORT}" | grep -oE '"HostPort":"[0-9]+"' | tr -dc '0-9')':'
+            _CONTAINER_PORT=$(echo "${_CONTAINER_PORT}" | grep -oE '[0-9]+/(tcp|udp)' | sed -e "s/\/tcp//")
+            echo -e "\e[39m    -p ${_HOST_IP}${_HOST_PORT}${_CONTAINER_PORT}\e[39m"
+        done
+        _CONTAINER_VOLUMES=$(echo "${_CONTAINER_JSON}" | jq '.["volumes"]' | grep -oE "[A-Za-z_/]+:[A-Za-z_/]+" | sort -u)
+        for _CONTAINER_VOLUME in ${_CONTAINER_VOLUMES[@]}; do
+            echo -e "\e[39m    -v ${_CONTAINER_VOLUME}\e[39m"
+        done
+    done
 }
 
 _clean(){
+    echo -e "\e[32mRemoving exited containers\e[39m"
     docker rm -f $(docker ps -aq -f status=exited) &> /dev/null
+    echo -e "\e[32mRemoving untagged images\e[39m"
     docker rmi -f $(docker images | grep "^<none>" | awk "{print \$3}") &> /dev/null
 }
 
@@ -108,7 +134,7 @@ _clear(){
     docker rm $(docker ps -aq) &> /dev/null
     _IMAGES=$(docker images -q)
     if [[ $1 ]]; then
-        _IMAGES=$(docker images | grep $1 | awk "{print \$3}")
+        _IMAGES=$(docker images | grep "$1" | awk "{print \$3}")
     fi
     docker rmi -f ${_IMAGES} &> /dev/null
 }
@@ -185,6 +211,16 @@ _update(){
     sudo chmod +x docker-host
 }
 
+_check() {
+    for _BIN in $(echo "docker git jq rsync ssh tar wget" | sed 's/\s/\n/g'); do
+        if [ $(which "${_BIN}") ]; then
+            echo -e "\e[32m${_BIN} binary found\e[39m"
+        else
+            echo -e "\e[31m${_BIN} binary not found\e[39m"
+        fi
+    done
+}
+
 _usage(){
     echo -e "     _            _                   _               _   "
     echo -e "  __| | ___   ___| | _____ _ __      | |__   ___  ___| |_ "
@@ -197,7 +233,7 @@ _usage(){
     echo -e "\e[33mCommands:\e[39m"
     echo -e " \e[32mstart\e[39m\t\tStart a configuration"
     echo -e " \e[32mstop\e[39m\t\tStop all containers"
-    echo -e " \e[32mstatus\e[39m\t\tList all images and all containers"
+    echo -e " \e[32mstatus\e[39m\t\tList all running containers with their interfaces"
     echo -e " \e[32mclean\e[39m\t\tDelete exited containers and unused images"
     echo -e " \e[32mclear\e[39m\t\tDelete all containers and all images"
     echo -e " \e[32mexport\e[39m\t\tExport data to remote host(s)"
@@ -216,5 +252,6 @@ case $1 in
     import) _import $2 ;;
     login) _login $2 ;;
     update) _update $2 ;;
+    check) _check ;;
     *) _usage ;;
 esac
