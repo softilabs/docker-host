@@ -90,7 +90,12 @@ _stop(){
 }
 
 _status(){
-    _CONTAINERS_JSON=$(docker inspect $(docker ps -q) | jq '.[] | {name: .Config.Hostname, image: .Config.Image, links: .HostConfig.Links, ports: .NetworkSettings.Ports, volumes: .HostConfig.Binds}' -c -M | sort -u)
+    _CONTAINERS_ID=$(docker ps -q)
+    if [ ! -n "${_CONTAINERS_ID}" ]; then
+        echo -e "\e[31mNo running container\e[39m"
+        return
+    fi
+    _CONTAINERS_JSON=$(docker inspect ${_CONTAINERS_ID} | jq '.[] | {name: .Config.Hostname, image: .Config.Image, links: .HostConfig.Links, ports: .NetworkSettings.Ports, volumes: .HostConfig.Binds}' -c -M | sort -u)
     declare -a _CONTAINERS=()
     for _CONTAINER_JSON in ${_CONTAINERS_JSON[@]}; do
         _CONTAINER_NAME=$(echo "${_CONTAINER_JSON}" | jq '.["name"]' | grep -oE "[a-z_]+")
