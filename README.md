@@ -1,15 +1,16 @@
 # Docker Host
 A Docker extension to manage multiple containers and more
 
-#### The main purpose is to assemble applications and her components by combining several containers grouped by environment, this combination is then called configuration.
+#### The main purpose is for defining and running multi-container applications grouped by environment, this combination is then called configuration.
 
-* No other syntax to learn than Docker
-* Chaining inheritance for images and global container options
 * Images don't age out on Docker Hub
-* Switch between configurations like a ninja
-* Conventions are intuitive and easy to apply
+* No other syntax to learn than Docker
+* Naming conventions are intuitive and easy to apply
+* Chaining inheritance for images and global container options
 * Variables in container options are interpreted
 * Export/Import data to remote host relative to home directory
+* Switch between configurations like a ninja
+* No need to install Docker Host on remote host
 
 ### Requirements
 
@@ -97,13 +98,17 @@ docker-host stop
 ```bash
 docker-host export vhome/Configs/hello
 ```
-*```[BASE_DIR]/Configs/[CONFIG]/.export/[USER]@[HOST]``` filename needs update.*
+*```[BASE_DIR]/Configs/[CONFIG]/.export/user@example.com``` filename needs update.*
 
 **Start configuration on remote host**
 ```bash
-ssh [USER]@[HOST] docker-host start vhome/Configs/hello/prod
+docker-host start vhome/Configs/hello/prod user@example.com
 ```
-*Docker Host installation is required on remote host.*
+
+**Open a terminal of a running container on remote host**
+```bash
+docker-host login blog user@example.com
+```
 
 ### Best practices
 

@@ -1,6 +1,14 @@
 #!/bin/bash
 
+_require() {
+    if [ -z $(which "$1") ]; then
+        echo -e "\e[31m$1 not found\e[39m"
+        exit
+    fi
+}
+
 _start(){
+    _require docker
     if [[ ! $1 || $1 == "--help" ]]; then
         echo -e "\e[33mUsage:\e[39m docker-host start [CONFIG_ENV_DIR]\n"
         echo -e "\e[33mOptions variables:\e[39m"
@@ -17,6 +25,11 @@ _start(){
         exit
     fi
     CONFIG_ENV_DIR=$(readlink -e $1)
+    if [ $2 ]; then
+        CONFIG_ENV_DIR=${CONFIG_ENV_DIR//$(cd && pwd)\/}
+        ssh $2 "$(typeset -f); _start ${CONFIG_ENV_DIR}"
+        exit
+    fi
     CONFIG_DIR=$(readlink -e ${CONFIG_ENV_DIR}/..)
     CONFIGS_DIR=$(readlink -e ${CONFIG_DIR}/..)
     BASE_DIR=$(readlink -e ${CONFIGS_DIR}/..)
@@ -83,6 +96,15 @@ _start(){
 }
 
 _stop(){
+    _require docker
+    if [[ $1 && $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host stop ([HOST])\e[39m"
+        exit
+    fi
+    if [ $1 ]; then
+        ssh $1 "$(typeset -f); _stop"
+        exit
+    fi
     echo -e "\e[32mKilling containers\e[39m"
     docker kill $(docker ps -q) &> /dev/null
     echo -e "\e[32mRemoving containers\e[39m"
@@ -90,6 +112,16 @@ _stop(){
 }
 
 _status(){
+    _require docker
+    _require jq
+    if [[ $1 && $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host status ([HOST])\e[39m"
+        exit
+    fi
+    if [ $1 ]; then
+        ssh $1 "$(typeset -f); _status"
+        exit
+    fi
     _CONTAINERS_ID=$(docker ps -q)
     if [ ! -n "${_CONTAINERS_ID}" ]; then
         echo -e "\e[31mNo running container\e[39m"
@@ -124,6 +156,15 @@ _status(){
 }
 
 _clean(){
+    _require docker
+    if [[ $1 && $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host clean ([HOST])\e[39m"
+        exit
+    fi
+    if [ $1 ]; then
+        ssh $1 "$(typeset -f); _clean"
+        exit
+    fi
     echo -e "\e[32mRemoving exited containers\e[39m"
     docker rm -f $(docker ps -aq -f status=exited) &> /dev/null
     echo -e "\e[32mRemoving untagged images\e[39m"
@@ -131,20 +172,45 @@ _clean(){
 }
 
 _clear(){
-    if [[ $1 == "--help" ]]; then
-        echo -e "\e[33mUsage:\e[39m docker-host clear [IMAGE_PATTERN]"
+    _require docker
+    if [[ ! $1 || $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host clear [IMAGE_PATTERN] ([HOST])"
+        exit
+    fi
+    if [ $2 ]; then
+        ssh $2 "$(typeset -f); _clear $1"
         exit
     fi
     docker kill $(docker ps -q) &> /dev/null
     docker rm $(docker ps -aq) &> /dev/null
-    _IMAGES=$(docker images -q)
-    if [[ $1 ]]; then
-        _IMAGES=$(docker images | grep "$1" | awk "{print \$3}")
-    fi
+    _IMAGES=$(docker images | grep "$1" | awk "{print \$3}")
     docker rmi -f ${_IMAGES} &> /dev/null
 }
 
+_login(){
+    _require docker
+    if [[ ! $1 || $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host login ([USER]@)[CONTAINER] ([HOST])\n"
+        echo -e "\e[33mInformation:\e[39m The username is root by default."
+        exit
+    fi
+    if [ $2 ]; then
+        ssh $2 "$(typeset -f); _login $1"
+        exit
+    fi
+    _CONTAINER=$1
+    _USER=root
+    _TMP=(${_CONTAINER//@/ })
+    if [ ${_TMP[1]} ]; then
+        _CONTAINER=${_TMP[1]}
+        _USER=${_TMP[0]}
+    fi
+    docker exec -ti ${_CONTAINER} setuser ${_USER} bash
+    #docker exec -ti --privileged --user ${_USER} ${_CONTAINER} bash
+}
+
 _export(){
+    _require rsync
     if [[ ! $1 || $1 == "--help" ]]; then
         echo -e "\e[33mUsage:\e[39m docker-host export [CONFIG_DIR]\n"
         echo -e "\e[33mInformation:\e[39m The paths are relative to home directory."
@@ -170,6 +236,7 @@ _export(){
 }
 
 _import(){
+    _require rsync
     if [[ ! $1 || $1 == "--help" ]]; then
         echo -e "\e[33mUsage:\e[39m docker-host import [CONFIG_DIR]\n"
         echo -e "\e[33mInformation:\e[39m The paths are relative to home directory."
@@ -194,36 +261,11 @@ _import(){
     done
 }
 
-_login(){
-    if [[ ! $1 || $1 == "--help" ]]; then
-        echo -e "\e[33mUsage:\e[39m docker-host login ([USER]@)[CONTAINER]\n"
-        echo -e "\e[33mInformation:\e[39m The username is root by default."
-        exit
-    fi
-    _CONTAINER=$1
-    _USER=root
-    _TMP=(${_CONTAINER//@/ })
-    if [ ${_TMP[1]} ]; then
-        _CONTAINER=${_TMP[1]}
-        _USER=${_TMP[0]}
-    fi
-    docker exec -ti ${_CONTAINER} setuser ${_USER} bash
-}
-
 _update(){
+    _require wget
     cd /usr/local/bin
     sudo wget -N https://raw.githubusercontent.com/softilabs/docker-host/master/docker-host
     sudo chmod +x docker-host
-}
-
-_check() {
-    for _BIN in $(echo "docker git jq rsync ssh tar wget" | sed 's/\s/\n/g'); do
-        if [ $(which "${_BIN}") ]; then
-            echo -e "\e[32m${_BIN} binary found\e[39m"
-        else
-            echo -e "\e[31m${_BIN} binary not found\e[39m"
-        fi
-    done
 }
 
 _usage(){
@@ -241,22 +283,21 @@ _usage(){
     echo -e " \e[32mstatus\e[39m\t\tList all running containers with their interfaces"
     echo -e " \e[32mclean\e[39m\t\tDelete exited containers and unused images"
     echo -e " \e[32mclear\e[39m\t\tDelete all containers and all images"
+    echo -e " \e[32mlogin\e[39m\t\tOpen a bash terminal on a running container"
     echo -e " \e[32mexport\e[39m\t\tExport data to remote host(s)"
     echo -e " \e[32mimport\e[39m\t\tImport data to remote host(s)"
-    echo -e " \e[32mlogin\e[39m\t\tOpen a bash terminal on a running container"
     echo -e " \e[32mupdate\e[39m\t\tUpdate from GitHub"
 }
 
 case $1 in
-    start) _start $2 ;;
-    stop) _stop ;;
-    status) _status ;;
-    clean) _clean ;;
+    start) _start $2 $3 ;;
+    stop) _stop $2 ;;
+    status) _status $2 ;;
+    clean) _clean $2 ;;
     clear) _clear $2 ;;
     export) _export $2 ;;
     import) _import $2 ;;
-    login) _login $2 ;;
-    update) _update $2 ;;
-    check) _check ;;
+    login) _login $2 $3 ;;
+    update) _update ;;
     *) _usage ;;
 esac
