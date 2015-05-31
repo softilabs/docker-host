@@ -263,6 +263,14 @@ _import(){
 
 _update(){
     _require wget
+    if [[ $1 && $1 == "--help" ]]; then
+        echo -e "\e[33mUsage:\e[39m docker-host update (docker)\n"
+        exit
+    fi
+    if [[ $1 && $1 == "docker" ]]; then
+        sudo wget -qO- https://get.docker.com/ | sudo sh
+        exit
+    fi
     cd /usr/local/bin
     sudo wget -N https://raw.githubusercontent.com/softilabs/docker-host/master/docker-host
     sudo chmod +x docker-host
@@ -298,6 +306,6 @@ case $1 in
     export) _export $2 ;;
     import) _import $2 ;;
     login) _login $2 $3 ;;
-    update) _update ;;
+    update) _update $2 ;;
     *) _usage ;;
 esac
