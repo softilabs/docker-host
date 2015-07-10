@@ -90,7 +90,7 @@ _start(){
             _add_optionsfile ${_IMAGEDIR}/.options
             _OPTIONS=$(eval echo ${_OPTIONS})
             echo -e "\e[32mRunning container ${_CONTAINER}\e[39m"
-            docker run -h ${_CONTAINER} --name ${_CONTAINER} ${_OPTIONS} -tid ${_IMAGE} 1> /dev/null
+            docker run --name ${_CONTAINER} ${_OPTIONS} -tid ${_IMAGE} 1> /dev/null
         done
     done
 }
@@ -127,10 +127,11 @@ _status(){
         echo -e "\e[31mNo running container\e[39m"
         return
     fi
-    _CONTAINERS_JSON=$(docker inspect ${_CONTAINERS_ID} | jq '.[] | {name: .Config.Hostname, image: .Config.Image, links: .HostConfig.Links, ports: .NetworkSettings.Ports, volumes: .HostConfig.Binds}' -c -M | sort -u)
+    _CONTAINERS_JSON=$(docker inspect ${_CONTAINERS_ID} | jq '.[] | {name: .Name, image: .Config.Image, links: .HostConfig.Links, ports: .NetworkSettings.Ports, volumes: .HostConfig.Binds}' -c -M | sort -u)
     declare -a _CONTAINERS=()
     for _CONTAINER_JSON in ${_CONTAINERS_JSON[@]}; do
-        _CONTAINER_NAME=$(echo "${_CONTAINER_JSON}" | jq '.["name"]' | grep -oE "[a-z_]+")
+        _CONTAINER_NAME=$(echo "${_CONTAINER_JSON}" | jq '.["name"]')
+        _CONTAINER_NAME=${_CONTAINER_NAME:2:-1}
         echo -e "\e[32m${_CONTAINER_NAME}\e[39m"
         _CONTAINER_IMAGE_NAME=$(echo "${_CONTAINER_JSON}" | jq '.["image"]' | grep -oE "[a-z]+/[a-z_]+")
         echo -e "\e[33m    ${_CONTAINER_IMAGE_NAME}\e[39m"
@@ -148,7 +149,7 @@ _status(){
             _CONTAINER_PORT=$(echo "${_CONTAINER_PORT}" | grep -oE '[0-9]+/(tcp|udp)' | sed -e "s/\/tcp//")
             echo -e "\e[39m    -p ${_HOST_IP}${_HOST_PORT}${_CONTAINER_PORT}\e[39m"
         done
-        _CONTAINER_VOLUMES=$(echo "${_CONTAINER_JSON}" | jq '.["volumes"]' | grep -oE "[A-Za-z_/]+:[A-Za-z_/]+" | sort -u)
+        _CONTAINER_VOLUMES=$(echo "${_CONTAINER_JSON}" | jq '.["volumes"]' | grep -oE "[-A-Za-z_/ ]+:[-A-Za-z_/ ]+" | sort -u)
         for _CONTAINER_VOLUME in ${_CONTAINER_VOLUMES[@]}; do
             echo -e "\e[39m    -v ${_CONTAINER_VOLUME}\e[39m"
         done
